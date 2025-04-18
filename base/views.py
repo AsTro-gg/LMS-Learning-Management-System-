@@ -68,7 +68,7 @@ class CourseView(GenericAPIView):
 
         # Serialize and paginate the course data
         serializer = self.get_serializer(paginated_data, many=True)
-        response = self.get_paginated_response(serializer.data)  # Fixed typo 'repsonse'
+        response = self.get_paginated_response(serializer.data) 
         return Response(response.data, status=status.HTTP_200_OK)
 
     def post(self, request):
@@ -382,43 +382,41 @@ class ProgressReportView(GenericAPIView):
 
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid():
-            student = serializer.validated_data['student']
+            student = serializer.validated_data['student'] 
             report_file = serializer.validated_data['report_file']
 
-            # Fetch sponsor instance
+            # Get sponsor instance
             sponsor_instance = Sponsor.objects.filter(student=student).first()
             sponsor = sponsor_instance.sponsor if sponsor_instance else None
 
-            # If sponsor instance exists, save report file
-            if sponsor_instance:
-                sponsor_instance.report_file = report_file
-                sponsor_instance.save()
-            else:
+            if not sponsor:
                 return Response({"error": "No sponsor found for this student."}, status=400)
 
-            # Send email to student
-            subject = f"New Progress Report Uploaded for {student.username}"
-            email_student = EmailMessage(
+            # Save the report file
+            sponsor_instance.report_file = report_file
+            sponsor_instance.save()
+
+            # Send email to sponsor
+            subject = f"Progress Report Uploaded for {student.username}"
+            email_sponsor = EmailMessage(
                 subject,
-                f"Hi {student.username}, your new progress report has been uploaded.",
+                f"A new progress report for {student.username} has been uploaded.",
                 settings.DEFAULT_FROM_EMAIL,
-                [student.email]
+                [sponsor.email]
             )
-            email_student.attach(report_file.name, report_file.read(), report_file.content_type)
-            email_student.send()
+            email_sponsor.attach(report_file.name, report_file.read(), report_file.content_type)
+            email_sponsor.send()
 
-            # Reset file pointer before sending email to sponsor
-            if sponsor:
-                report_file.seek(0)
-                email_sponsor = EmailMessage(
-                    subject,
-                    f"A new progress report for {student.username} has been uploaded.",
-                    settings.DEFAULT_FROM_EMAIL,
-                    [sponsor.email]
-                )
-                email_sponsor.attach(report_file.name, report_file.read(), report_file.content_type)
-                email_sponsor.send()
-
-            return Response({'message': 'Report uploaded. Email(s) sent.'}, status=201)
+            return Response({'message': 'Report uploaded. Email sent to sponsor.'}, status=201)
 
         return Response(serializer.errors, status=400)
+
+class NotificationView(GenericAPIView):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerialiser
+    permission_classes = [IsAuthenticated]
+
+    def get(self,request):
+        model = self.get_queryset()
+        serializers = self.get_serializer(model,many = True)
+        return Response(serializers.data,status=200)

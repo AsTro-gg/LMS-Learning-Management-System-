@@ -3,7 +3,6 @@ from rest_framework import serializers
 from django.core.mail import send_mail
 from django.conf import settings
 
-
 class UserRegistrationSerializer(serializers.ModelSerializer):
     #customising serialiser so that we dont manually do anything in views because it is very error sensitive(T-T)
     #write only = True ensures password isnt visible
@@ -29,23 +28,34 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         return user
 
+
+
 class CourseViewSerialiser(serializers.ModelSerializer):
-    instructor = serializers.StringRelatedField(read_only = True) #this ensures instructor field cannot be inputted
+    instructor = serializers.StringRelatedField(read_only=True)
+
     class Meta:
         model = Course
-        fields = ['id','title','difficulty','instructor','start_date','end_date']
+        fields = ['id', 'title', 'difficulty', 'instructor', 'start_date', 'end_date']
 
-    def create(self,validated_data):
-        courses = Course.objects.create(**validated_data)
+    def create(self, validated_data):
+        course = Course.objects.create(**validated_data)
 
-        send_mail(
-            f"New Course: {courses.title}",
-            f"Checkout this course by {courses.instructor} which starts on {courses.start_date} for an elevated learning experience on {courses.title}",
-            settings.EMAIL_HOST_USER,
-            [courses.instructor.email]
+        # Get all students
+        students = User.objects.filter(role='student')
+        student_emails = [student.email for student in students]
+
+        print("Student Emails:", student_emails)  #debugging
+
+        if student_emails:
+            send_mail(
+                subject=f"New Course: {course.title}",
+                message=f"Check out this course by {course.instructor} starting on {course.start_date}. Enhance your skills with '{course.title}'!",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=student_emails,
+                fail_silently=False
             )
 
-        return courses
+        return course
 
 class EnrollmentSerialiser(serializers.ModelSerializer):
     student_name = serializers.SerializerMethodField()

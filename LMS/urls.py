@@ -31,5 +31,6 @@ urlpatterns = [
     path('student-progress/',StudentProgressView.as_view(),name='studentprogress'),
     path('admin-dashboard/',admin_dashboard_api,name='admin_dashboard_api'),
     path('sponsor-dashboard/',sponsor_dashboard_api,name='sponsor_dashboard_api'),
-    path('progress-report/',ProgressReportView.as_view(),name='progress_report')
+    path('progress-report/',ProgressReportView.as_view(),name='progress_report'),
+    path('notification/',NotificationView.as_view(),name='Notification')
 ]
